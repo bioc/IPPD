@@ -1,0 +1,36 @@
+setClass(Class="peaklist",
+         representation(peaklist = "matrix",
+                        peaklistprocessed = "matrix",
+                        model = "character",
+                        loss = "character",
+                        alpha = "function",
+                        sigma = "function",
+                        mu = "function",
+                        charges = "numeric",
+                        basis = "sparseMatrix",
+                        book = "matrix",
+                        beta = "numeric",
+                        locnoise = "matrix",
+                        noiselevel = "numeric",
+                        goodnessoffit = "numeric",
+                        data = "list"))
+                   
+                        
+  
+
+
+
+setClass(Class="modelfit",
+         representation(model = "character",
+                        fitting = "character",
+                        alphafunction = "function",
+                        sigmafunction = "function",
+                        mufunction = "function",
+                        peakfitresults = "matrix",
+                        bestpeak = "list"))
+
+
+
+
+
+

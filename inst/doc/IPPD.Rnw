@@ -1,0 +1,557 @@
+%\VignetteIndexEntry{IPPD Manual}
+%\VignetteKeywords{Proteomics}
+%\VignetteDepends{IPPD}
+%\VignettePackage{IPPD}
+
+
+
+\input{preamble_paper.tex}
+\title{\texttt{IPPD} package vignette}
+\author{
+        \begin{tabular}{ll}
+        Martin Slawski $^{1}$ & \url{ms@cs.uni-sb.de}  \\
+        Rene Hussong $^2$ & \url{rene@bioinf.uni-sb.de} \\
+        Matthias Hein $^1$ & \url{hein@cs.uni-sb.de}
+      \end{tabular} 
+    }
+
+    \SweaveOpts{keep.source=TRUE}
+\begin{document}
+\date{\normalsize{\begin{tabular}{l}
+                  $^1$ Department of Computer Science, Machine Learning Group \\
+                  $^2$ Center for Bioinformatics \\
+                      $\; \; \;$Junior Research Group for Protein-Protein Interactions and Computational Proteomics\\
+                \end{tabular}\\
+                \vspace{0.2cm}
+                \large Saarland University, Saarbr\"ucken, Germany}}
+            \maketitle
+
+
+%\vspace{11pt}
+\normalsize
+\begin{abstract}
+This is the vignette of the Bioconductor add-on package 
+\texttt{IPPD} which implements automatic isotopic pattern extraction
+from a raw protein mass spectrum. Basically, the user only has to provide
+mass/charge channels and corresponding intensities, which are automatically
+decomposed into a list of monoisotopic peaks. \texttt{IPPD} can handle
+several charge states as well as overlaps of peak patterns.
+\end{abstract}
+
+%<<preliminaries,echo=FALSE,results=hide>>=
+%library(packagename)
+%@
+
+\section{Aims and scope of \texttt{IPPD}}
+
+A crucial challenge in the analysis of protein mass spectrometry data is to
+automatically process the raw spectrum to a list of peptide masses. 
+\texttt{IPPD} is tailored to spectra where peptides emerge in the form
+of isotope patterns, i.e. one observes several peaks for each peptide mass at a
+given charge state due to the natural abundance of heavy isotopes.
+Datasets with a size of up to 100,000 mass/charge channels and 
+the presence of isotope patterns at multiple charge states 
+frequently exhibiting overlap make the manual annotation of a raw spectrum a
+tedious task. \texttt{IPPD} provides functionality to perform this task
+in a fully automatic, transparent and user-customizable way. Basically,
+one feeds the raw spectrum into one single function to
+obtain  a list of monoisotopic peaks described by a mass/charge channel,
+a charge and an intensity. What makes our approach particularly user-friendly
+is its dependence on only a small set of easily interpretable
+parameters. We also offer a method to display the decomposition of the
+spectrum graphically, thereby facilitating a manual validation of the output.     
+
+\section{Methodology}
+
+\subsection{Template model}
+
+In the context of this package, a protein mass spectrum is understood as a
+sequence of pairs $\{x_i, y_i \}_{i=1}^n$, where $x_i = m_i/z_i$ is
+a mass ($m_i$) per charge ($z_i$) value (measured in Thomson) and $y_i$ is the
+intensity, i.e. the abundance of a particular mass (modulo charge state), 
+observed at $x_i$, $i=1,\ldots,n$, which are assumed to be in an increasing order. The $y_i$ are modeled as a linear
+combination of template functions representing prior knowledge about peak
+shapes and the composition of isotopic patterns. If our model were exact, we
+could write 
+\begin{equation}\label{eq:model.basic}
+\bm{y} = \bm{\Phi} \bm{\beta}^{\ast}, \quad \bm{y} = (y_1,\ldots,y_n)^{\T},
+\end{equation}
+where $\bm{\Phi}$ is a matrix template functions and $\bm{\beta}^{\ast}$ a
+vector of weights for each template. Only a small fraction of all templates 
+are needed to fit the signal, i.e. $\bm{\beta}^{\ast}$ is highly sparse. Since
+$\bm{y} \geq 0$, where '$\geq$' is understood componentwise, all template
+functions are nonnegative and accordingly $\bm{\beta}^{\ast} \geq 0$. 
+\begin{figure}
+\begin{tabular}{cc}
+\includegraphics[height = 7cm, width = 7cm]{templates} &
+\includegraphics[height = 7cm, width = 7cm]{templatedetail}
+\end{tabular}
+\caption{Illustration of the template construction as described in the
+  text. The left panel depicts different templates of different charge states
+  (1 to 4). The right panel zooms at the charge two template $\varphi_2$.}\label{fig:templates}
+\end{figure}
+Model \eqref{eq:model.basic} can equivalently be written as
+\begin{equation}\label{eq:model.basic.charge}
+\bm{y} = \left[ \begin{array}{ccc}
+         \bm{\Phi}_1 & \ldots & \bm{\Phi}_C
+         \end{array} \right]  \left[ \begin{array}{c}
+                                    \bm{\beta}^{\ast}_1 \\
+                                    \vdots \\
+                                    \bm{\beta}^{\ast}_C    
+                                   \end{array}
+                                  \right]  = \sum_{c=1}^C  \bm{\Phi}_c \bm{\beta}^{\ast}_c,
+\end{equation}
+where $\bm{\Phi}_c, \bm{\beta}_c^{\ast}$ denote the matrix
+of template functions and weight vector to fit isotopic patterns of a particular
+charge state $c$, $c = 1,\ldots,C$. Each submatrix $\bm{\Phi}_c$ can in turn
+be divided into columns $\bm{\varphi}_{c,1}, \ldots, \bm{\varphi}_{c,p_c}$,
+where the entries of each column vector store the evaluations of a template
+$\varphi_{c_j}$, $j=1,\ldots,p_c,$ at the $x_i$, $i=1,\ldots,n$. Each template 
+$\varphi_{c,j}$ depends on parameter $m_{c,j}$ describing the $m/z$ position at
+which $\varphi_{c,j}$ is placed. A
+template $\varphi_{c,j}$ is used to fit an isotopic pattern of peaks
+composed of several single peaks, which is modeled as
+\begin{equation}\label{eq:model.template}
+\varphi_{c,j} = \sum_{k \in Z_{c,j}} a_{c,j,k} \; \psi_{c,j,k, \bm{\theta}_{c,j}}, \quad Z_{c,j} \subset \mathbb{Z}
+\end{equation}
+where the  $\psi_{c,j,k}$ are functions representing a peak of a single
+isotope within an isotopic pattern. They depend on $m_{c,j}$ and a parameter vector $\bm{\theta}_{c,j}$. The
+nonnegative weights $a_{c,j,k}$ reflect the relative abundance of the isotope indexed
+by $k$. The $a_{c,j,k}$ are computed according to the averagine model
+(\citet{Senko1995}) and hence are fixed in advance. Each $\psi_{c,j,k}$ is
+linked to a location $m_{c,j,k}$ at which it attains its maximum. The $m_{c,j,k}$ are
+calculated from $m_{c,j}$ as $m_{c,j,k} = m_{c,j} + \kappa \frac{k}{c}$, 
+where $\kappa$ equals 1 Dalton ($\approx 1.003$). The rationale behind
+Eq. \eqref{eq:model.template} and the definitions that follow is the fact that
+the location of the most intense isotope is taken as characteristic location of
+the template, i.e. we set $m_{c,j,0} = m_{c,j}$ so that the remaining
+$m_{c,j,k}, \; k \neq 0,$ are computed by shifting $m_{c,j}$ in both directions
+on the $m/z$ axis. By 'most intense isotope', we mean that $a_{c,j,0} = \max_k
+a_{c,j,k} = 1$. The set $Z_{c,j}$ is a subset of the integers which depends on
+the averagine model and a pre-specified tolerance, i.e. we truncate summation
+in Eq. \eqref{eq:model.template} if the weights drop below that
+tolerance. Figure \ref{fig:templates} illustrates the construction scheme and
+visualizes our notation.
+
+\subsection{Peak shape}\label{sec:peakshape}
+
+In an idealized setting, the $\psi_{c,j,k}$ are delta functions at specific
+locations. In practice, however, the shape of a peak equals that of a bump
+which may exhibit some skewness. In the case of no to moderate skewness, we
+model peaks by Gaussian functions:
+\begin{equation}\label{eq:gaussian}
+\psi_{c,j,k}(x) = \exp \left( - \frac{(x - m_{c,j,k})^2}{\sigma_{c,j}}\right). 
+\end{equation}
+The parameter to be determined is $\bm{\theta}_{c,j} = \sigma_{c,j} > 0$. In the
+case of considerable skewness, peaks are modeled by exponentially modified
+Gaussian (EMG) functions, see for instance \citet{Grushka1972},
+\citet{MarcoBombi2001}, and \citet{SchulzTrieglaff2007} in the
+context of protein mass spectrometry:  
+\begin{align}\label{eq:emg}
+\begin{split}
+&\psi_{c,j,k}(x) = \frac{1}{\alpha_{c,j}} \exp \left(\frac{\sigma_{c,j}^2}{2
+    \alpha_{c,j}^2} + \frac{\mu_{c,j} - (x - m_{c,j,k})}{\alpha_{c,j}}
+\right) \left(1 - F\left(\frac{\sigma_{c,j}}{\alpha_{c,j}} + \frac{\mu_{c,j} -
+      (x - m_{c,j,k})}{\sigma_{c,j}}
+  \right) \right),  \\
+&F(t) = \int_{-\infty}^t  \frac{1}{\sqrt{2 \pi}} 
+\exp \left(-\frac{u^2}{2} \right) \; du.
+\end{split}
+\end{align}
+The EMG function involves a vector of three parameters $\bm{\theta}_{c,j} =
+(\alpha_{c,j}, \sigma_{c,j}, \mu_{c,j})^{\T} \in \R^+ \times \R^+ \times \R$. The parameter $\alpha_{c,j}$
+controls the additional length of the right tail as compared to a
+Gaussian. For $\alpha_{c,j} \downarrow 0$, the EMG function becomes a
+Gaussian. For our fitting approach as outlined in Section
+\ref{sec:templatefitting}, it is crucial to estimate the $\bm{\theta}_{c,j}$, which are usually unknown, from the data
+as good as possible. To this end, we model each component $\theta_l$ of
+$\bm{\theta}$ as a linear combination of known functions $g_{l,m}$ of $x = m/z$ and an error component $\varepsilon_l$, i.e.
+\begin{equation}\label{eq:parametermodel}
+\theta_l(x) = \sum_{m = 1}^{M_l}  \nu_{l,m} g_{l,m}(x) + \varepsilon_l(x).
+\end{equation}
+In the case of no prior knowledge about the $g_{l,m}$, we model $\theta_l$ as a
+constant independent of $x$. In most cases, it is sensible to assume a linear
+trend, i.e. $\theta_{l}(x) = \nu_{l,1} + \nu_{l,2} x$. In order to fit a model of the form
+\eqref{eq:parametermodel}, we have to collect information from the data
+$\{x_i, y_i \}_{i=1}^n$. To be precise, we proceed according to the following
+steps.
+\begin{enumerate}
+\item We apply a simple peak detection algorithm to the spectrum to identify
+  disjoint regions $\mc{R}_r \subset \{1,\ldots, n \}, \; \; r=1,\ldots,R$, of well-resolved peaks.
+\item For each region $r$, we fit the chosen peak shape to the data $\{x_i, y_i
+  \}_{i \in \mc{R}_r}$ using nonlinear least squares:
+      \begin{equation}
+        \min_{\bm{\theta}} \sum_{i \in \mc{R}_r} (y_i - \psi_{\bm{\theta}}(x_i))^2,
+      \end{equation}
+      yielding an estimate $\wh{\bm{\theta}}_r(\wh{x}_r)$, where $\wh{x}_r$
+      denotes an estimation for the mode of the peak in region $\mc{R}_r$.
+\item The sequence $\{ \wh{x}_r, \wh{\bm{\theta}}_r \}_{r=1}^R$ is then used
+  as input for the estimation of the parameters $\nu_{l,m}$ in model \eqref{eq:parametermodel}.       
+\end{enumerate}
+Step 2. is easily solved by the general purpose nonnegative least squares
+routine \texttt{nls} in \texttt{R:::stats} for a Gaussian peak shape. For the
+EMG, we have to perform a grid search over all three parameters to find a
+suitable starting value, which is then passed to the general purpose optimization
+routine \texttt{optim} in \texttt{R:::stats} with the option \texttt{method =
+  "BFGS"} and a specification of a closed form expression of the gradient via
+the argument \texttt{gr}. For step 3., we use least absolute deviation
+regression because of the presence of outliers arising from less
+well-resolved, wiggly or overlapping peaks. The whole procedure is performed
+by the function \texttt{fitModelParameters} as demonstrated below. After
+loading the package, we access the real world dataset \texttt{myo500} and
+extract $m/z$ channels (\texttt{x}) and the corresponding intensities
+(\texttt{y}). For computational convenience and since they contain very few
+relevant information, we discard all channels above $2500$. 
+
+<<setup, echo=FALSE, results=hide>>= 
+
+options(prompt = "R> ", continue = " ", warn = -1, width = 80)                                       
+
+@
+
+<<loadmyo500, echo=TRUE>>=
+
+library(IPPD) 
+data(myo500)
+x <- myo500[,"mz"]
+y <- myo500[,"intensities"]
+y <- y[x <= 2500]
+x <- x[x <= 2500]
+@
+
+To have a look at the data, we plot the first $1000$ (\texttt{x},\texttt{y}) pairs:
+
+<<plotmyo500first1000, fig=TRUE>>=
+
+layout(matrix(c(1,2), 1, 2))
+
+plot(x[1:1000], y[1:1000], xlab = expression(x[1]~~ldots~~x[1000]), 
+     cex.lab = 1.5, cex.axis = 1.25, ylab = expression(y))
+
+plot(x[x >= 804 & x <= 807], y[x >= 804 & x <= 807], xlab = "x: 804 <= x <= 807", 
+     cex.lab = 1.5, cex.axis = 1.25, ylab = expression(y), type = "b")
+
+layout(matrix(1))
+
+@
+
+In the plot, one identifies a prominent peak pattern beginning at about $804$,
+which is zoomed at in the right panel.\\
+We now apply \texttt{fitModelParameters} to fit model
+\eqref{eq:parametermodel} for the width parameter $\sigma$ of a Gaussian
+function \eqref{eq:gaussian}. For simplicity, we take $g_1(x) = 1$, $g_2(x) =
+x$. The model is specified by using an \texttt{R} formula interface.
+
+<<fitGauss>>=
+
+fitGauss <- fitModelParameters(mz = x, intensities = y,
+                   model = "Gaussian", fitting = "model", formula.sigma = formula(~mz),
+                   control = list(window = 6, threshold = 200))
+@
+
+An analogous command for the EMG \eqref{eq:emg} with the model formulae $\alpha(x) = \nu_{1,1} +
+\nu_{1,2} x$, $\sigma(x) = \nu_{2,1} + \nu_{2,2} x$, $\mu(x) = \nu_{3,1}$ is
+given by
+
+
+<<fitEMG>>=
+
+fitEMG <- fitModelParameters(mz = x, intensities = y,
+                   model = "EMG", fitting = "model",
+                           formula.alpha = formula(~mz),
+                           formula.sigma = formula(~mz),
+                           formula.mu = formula(~1),
+                           control = list(window = 6, threshold = 200))
+@
+
+Inspecting the results, we find that $R = 55$ peak regions are used to fit an
+EMG parameter model. Moreover, it turns out that the EMG model is a more
+appropriate peak model for the data when visually comparing the list of mean residual sums of
+squares of the EMG fits and the Gauss fits extracted from \texttt{slot(fitEMG,
+  "peakfitresults")} and \texttt{slot(fitGauss, "peakfitresults")},
+respectively. The figure shows an example where the EMG shape comes relatively
+close to the observed data. A long right tail indicates that a Gaussian would yield
+a rather poor fit here.
+
+
+
+<<assessfit, fig=TRUE>>=
+
+show(fitEMG)
+mse.EMG <- data.frame(mse = slot(fitEMG,"peakfitresults")[,"rss"] / slot(fitEMG,"peakfitresults")[,"datapoints"], 
+                      peakshape = rep("EMG", nrow( slot(fitEMG,"peakfitresults"))))
+mse.Gauss <- data.frame(mse = slot(fitGauss,"peakfitresults")[,"rss"] / slot(fitGauss,"peakfitresults")[,"datapoints"], 
+                        peakshape = rep("Gaussian", nrow( slot(fitGauss,"peakfitresults"))))
+mses <- rbind(mse.EMG, mse.Gauss)
+with(mses, boxplot(mse ~ peakshape, cex.axis = 1.5, cex.lab = 1.5, ylab = "MSE"))
+
+@ 
+
+<<assessfitEMGpeak, fig=TRUE>>=
+visualize(fitEMG, type = "peak", cex.lab = 1.5, cex.axis = 1.25)
+@
+
+
+To assess the fit of the two linear models for the EMG parameters $\alpha$ and
+$\sigma$, we use again the function \texttt{visualize} as follows:
+
+
+<<assessfit2, fig=TRUE>>=
+
+visualize(fitEMG, type = "model", modelfit = TRUE, parameters = c("sigma", "alpha"), cex.lab = 1.5, cex.axis = 1.25)
+
+@
+
+While the fit for $\sigma$ seems to be reasonable except for some extreme
+outliers, the fit for $\alpha$ is not fully convincing. Nevertheless, in the
+absence of further knowledge, the fit produces good results in the
+template matching step detailed in the next section.
+
+\subsection{Template fitting}\label{sec:templatefitting}
+
+Once all necessary parameters have been determined, the positions at which the
+templates are placed have to be fixed. In general, one has to choose positions from
+the interval $[x_1, x_n]$. We instead restrict us to a suitable subset of the finite
+set $\{ x_i \}_{i=1}^n$. The deviations from the true positions is then at
+least in the order of the sampling rate, but this can be improved by means of
+a postprocessing step described in \ref{sec:postprocessing}. Using the whole set $\{ x_i \}_{i=1}^n$
+may be computationally infeasible if $n$ is large. Such an approach would be at least
+computationally wasteful, since 'genuine' peaks patterns occur very sparsely
+in the spectrum. Therefore, we apply a pre-selection step on the basis of what
+we term 'local noise level' (LNL). The LNL is defined as a quantile (typically
+the median) of the intensities $y_i$ falling into a sliding window of fixed width around a
+specific position. Given the LNL, we place templates on an $x_i$ (one for each
+charge state) if and only if the corresponding $y_i$ exceeds the LNL at $x_i$
+by a factor \texttt{factor.place}, which typically equals three or four and  has
+to be
+specified by the user. Given the positions of the templates, we compute the
+matrix $\bm{\Phi}$ according to Eqs. \eqref{eq:model.basic} and
+\eqref{eq:model.template}. It then remains to estimate the coefficient vector
+$\bm{\beta}^{\ast}$ on the basis of two structural assumptions, sparsity and
+nonnegativity of all quantities involved. Related approaches in the literature
+(\citet{Du2006}, \citet{Renard2008}) account for sparsity of
+$\bm{\beta}^{\ast}$ by using $\ell_1$-regularized regression
+(\citet{Tib1996}). We here argue empirically that $\ell_1$ regularization is
+not the best to do, since it entails the selection of a tuning parameter which
+is difficult to choose in our setting, and secondly the structural constraints
+concerning nonnegativity turn out to be so strong that sparsity is more
+conveniently achieved by fitting followed by hard thresholding. We first determine
+\begin{align}\label{eq:fitting}
+\begin{split}  
+&\wh{\bm{\beta}} \in \argmin_{\bm{\beta}} \norm{\bm{y} - \bm{\Phi}
+  \bm{\beta}}_{q}^q, \; \; q=1 \; \text{or} \; q = 2,  \\
+& \text{subject to} \; \;  \bm{\beta} \geq 0.
+\end{split}
+\end{align}
+The optimization problem \eqref{eq:fitting} is a quadratic ($q=2$) or linear ($q = 1$) program and is solved
+using standard techniques (\citet{BoydVandenberghe2004}); we omit further
+details here. We remark that in the presence of high noise, it is helpful to
+subtract the LNL from $\bm{y}$. Concerning the choice of $q$, we point out
+that $q = 1$ can cope better with deviations from model assumptions,
+i.e. deviations from the averagine model or from the peak model and thus may lead
+to a reduction of the number of false positives.
+
+\subsection{Postprocessing}\label{sec:postprocessing}
+
+Given an estimate $\wh{\bm{\beta}}$, we define $\mc{M}_c =
+\{m_{c,j}: \; \wh{\beta}_{c,j} > 0 \} \subset \{x_i \}_{i=1}^n, \; \; c = 1,\ldots,C,$ as the
+set of all template locations where the corresponding coefficient
+exceeds $0$, separately for each charge. Due to a limited sampling rate,
+different sources of noise and model misfit, the locations in the sets $\{
+\mc{M}_c \}_{c=1}^C$ may still deviate considerably from the set of true peak
+pattern locations. Specifically, the sets $\{\mc{M}_c \}_{c=1}^C$ tend to be
+too large, mainly caused by what we term 'peak splitting': for the reasons
+just mentioned, it frequently occurs that several templates are used to fit
+the same peak. This can at least partially be corrected by means of the following merging procedure.
+\begin{enumerate}
+\item Separately for each $c$, divide the sets $\mc{M}_c$ into groups
+  $\mc{G}_{c,1},\ldots,\mc{G}_{c,G_c}$ of 'adjacent' positions. Positions are
+  said to be adjacent if their distance on the $m/z$ scale is below a certain
+  tolerance as specified via a parts per million (ppm) value.     
+\item For each $c = 1,\ldots,C$ and each 
+      group  $g_c = 1,\ldots,G_c$, we solve the following optimization problem.
+      \begin{equation}\label{eq:merging}
+      (\wt{m}_{c, g}, \wt{\beta}_{c, g}) = \min_{m_{c, g}, \beta_{c, g}}
+      \norm{\sum_{m_{c, j} \in \mc{G}_{c, g}}  \wh{\beta}_{c, j} \psi_{m_{c,
+            j}} - \beta_{c, g}  \psi_{m_{c, g}} 
+      }_{L^2}^2
+      \end{equation}
+      In plain words, we take the fitted function resulting from the functions
+      $\{ \psi_{m_{c, j}} \}$ representing the most intense peak of each
+      peak pattern in the same group and then determine a function
+      $\psi_{\wt{m}_{c, g}}$ placed at location $\wt{m}_{c, g}$ and weighted
+      by $\wt{\beta}_{c, g}$ such
+      that $\wt{\beta}_{c, g}  \psi_{\wt{m}_{c, g}}$ approximates the fit of
+      multiple functions $\{ \psi_{m_{c, j}} \}$ best (in a least squares sense).
+\item One ends up with sets $\wt{\mc{M}}_{c} = \{ \wt{m}_{c, g} \}_{g=1}^{G_c}$
+  and coefficients $\{ \wt{\beta}_{c, g} \}_{g = 1}^{G_c}, \; \; c=1,\ldots,C$.     
+\end{enumerate}
+The additional benefit of step 2. as compared to the selection of the function
+with the largest coefficient as proposed in \citet{Renard2008} is that, in the
+optimal case, we are able to determine the peak pattern location even more
+accurate as predetermined by a limited sampling rate. The integral in
+\eqref{eq:merging} can be solved analytically for a Gaussian function, and
+we resort to numeric approximations for the EMG function.\\
+The sets $\{ \mc{M}_{c} \}$ tend to be too large in the sense that they
+still contain noise peak patterns. Therefore, we apply hard thresholding to the $ \{
+\wt{\beta}_{c, g} \}_{g=1}^{G_c}, \; c=1,\ldots,C$, discarding all positions where the corresponding
+coefficients is less than a significance level times the LNL, where
+the signficance level has to be specified by the user.
+
+\section{Case study}\label{sec:casestudy}
+
+We continue the data analysis starting in Section \ref{sec:peakshape}. The
+methodology of the Sections \ref{sec:templatefitting} and
+\ref{sec:postprocessing} is implemented in the function
+\texttt{getPeaklist}. For the computation of the template functions, we
+recycle the object \texttt{fitEMG} obtained in Section \ref{sec:peakshape}.
+
+<<getlist>>=
+
+EMGlist <- getPeaklist(mz = x, intensities = y, model = "EMG",
+model.parameters = fitEMG, 
+loss = "L2", trace = FALSE,
+control.localnoise = list(factor.place = 2),
+control.basis = list(charges = c(1, 2)),
+control.postprocessing = list(ppm = 200))
+
+show(EMGlist)
+
+@
+
+The argument list can be summarized as follows: we compute EMG templates for
+charges $1$ and $2$;  templates are placed on all $m/z$-positions in the
+spectrum where the intensity is at least two times the LNL; the fit is least
+squares (\texttt{loss =  L2});
+postprocessing is performed by merging peaks within
+a tolerance of 200 ppm. Subsequently, only the patterns with signal-to-noise
+ratio bigger than three are maintained. It has the following form.
+
+<<showlist>>=
+
+threshold(EMGlist, threshold = 3, refit = TRUE, trace = FALSE)
+
+@ 
+
+The results can be examined in detail graphically. We finally present some
+selected regions to demonstrate that our method performs well. The pre-defined
+method \texttt{visualize} can be used display the template fitting at several
+stages for regions within selected $m/z$ intervals as specified by the
+arguments \texttt{lower} and \texttt{upper}. 
+
+<<plot1, fig=TRUE>>=
+
+visualize(EMGlist, x, y, lower= 963, upper = 973,
+           fit = FALSE, fittedfunction = TRUE, fittedfunction.cut = TRUE,
+           localnoise = TRUE, quantile = 0.5,
+           cutoff.functions = 3)
+
+@ 
+
+<<plot2, fig=TRUE>>=
+
+
+visualize(EMGlist, x, y, lower= 1502, upper = 1510,
+           fit = FALSE, fittedfunction = TRUE, fittedfunction.cut = TRUE,
+           localnoise = TRUE, quantile = 0.5,
+           cutoff.functions = 2)
+
+
+@
+
+In the $m/z$ range $[963,973]$ a charge-1 peak overlaps with a more intense
+charge two peak. A further overlap occurs in the interval $[1502,1510]$, and
+it is correctly resolved.\\
+An even more challenging problem, in which it is already difficult to unravel
+the overlap by visual inspection, is displayed in the following plot.
+
+<<plot3, fig=TRUE>>=
+
+visualize(EMGlist, x, y, lower= 1360, upper = 1364,
+          fit = FALSE, fittedfunction = TRUE, fittedfunction.cut = TRUE,
+          localnoise = TRUE, quantile = 0.5, 
+          cutoff.functions = 2)
+
+@ 
+
+
+
+
+
+
+
+
+
+
+%In the absence of any kind of noise, the $\psi_{c,j,k}$
+%would simply be delta functions at the locations $m_{c,j,k}$.   
+
+%%% -> futher remarks here
+
+
+
+
+
+
+
+
+
+
+
+
+%In the
+%absence of noise, one would have
+%\begin{equation*}
+%\bm{y} = \bm{\Phi} \bm{\beta} = \sum_{j=1}^p  \bm{\phi}_j \beta_j
+%\end{equation*}
+
+%only small subset of the \{ \beta_j \} are nonzero, all positive.
+
+%\bm{\Phi} = [\bm{\phi}_1 | \ldots | \bm{\phi}_p ]
+%\bm{\phi}_j = (\phi(x_1;\bm{\theta}_1),\ldots, \phi(x_n; \bm{\theta}_j))^{\T},
+%$j = 1,\ldots,p$
+
+%the set of $\phi_j$ dictionary
+
+%\phi = template function
+%\bm{\theta}_j is assigned charge state and location
+
+%\bm{\theta}_j = (c_j, m_j, \bm{\vartheta}_j)
+
+%where $\bm{\vartheta}_j$, possibly depending on $m_j$ is 
+%a further parameter vector
+
+%each $\phi$ template can be written as a finite sum of isotope contributions
+
+%\phi_j = \sum_k^K a_{jk} \psi_{jk}(\bm{\theta}_j)
+
+%the \psi_{jk} describe the (shape of) a single peak
+
+%use initial-peak-parametrization ?
+
+%$m_{0k} = $
+%$m_{jk} = m_{0k} +  \iota_{jk} \kappa/c_j$
+%$m_{0k}$ most intense peak location within pattern
+%$\iota_{jk} \in \{ \}$ 
+%$K$ number of isotopic contributions
+%$a_{jk}$ amplitudes/weights
+ 
+
+
+ 
+
+
+  
+
+
+
+
+
+
+
+\vspace{-1cm}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

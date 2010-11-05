@@ -1,0 +1,267 @@
+\documentclass[a4paper, 11pt]{article}
+
+%%% packages
+
+%\usepackage{german}
+%\usepackage[german]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{latexsym}
+\usepackage{verbatim}
+\usepackage{epsfig}
+\usepackage{fleqn}
+\usepackage{color}
+%\usepackage{titlesec}
+%\usepackage{titletoc}
+\usepackage[colorlinks=true, linkcolor=blue, anchorcolor=blue,
+											citecolor=blue, filecolor=blue, menucolor=blue, pagecolor=blue,
+											urlcolor=blue, plainpages=false, pdfpagelabels]{hyperref}
+										
+%\usepackage{mathrsfs}
+%\usepackage{eufrak}
+%\usepackage[mathcal]{euscript}
+\usepackage{graphicx}
+%\usepackage{multicol}
+\usepackage{amsbsy}
+\usepackage{amscd}
+\usepackage{bm}
+%\usepackage[ruled]{algorithm2e}
+%\usepackage[nonamebreak,square,numbers]{natbib}
+\usepackage{natbib}
+%\usepackage{tikz}
+%\citestyle{authoryear,aysep={},yysep={;},numbers}
+
+%%% page layout
+
+%\parindent0pt
+%\parskip1.2ex
+%\oddsidemargin0.5cm
+%\evensidemargin+20pt
+%\addtolength{\evensidemargin}{-2cm}
+%\addtolength{\marginparwidth}{3cm}
+%\addtolength{\marginparsep}{3cm}
+%\addtolength{\oddsidemargin}{-2cm}
+%\topmargin-1.8cm
+%\textheight22cm
+%\textwidth15.5cm
+%\headsep0.5cm
+%\setlength{\footskip}{0.5cm}
+%\linespread
+%\usepackage{E:/R_Installation/share/texmf/Sweave}
+%\pagestyle{headings}
+
+\parindent0pt
+\parskip1ex
+\oddsidemargin-0.6cm
+\evensidemargin-0.6cm
+\topmargin-1.5cm
+\textheight24cm
+\textwidth15.1cm
+\headsep0.5cm
+\footskip1cm
+%\usepackage{E:/R_Installation/share/texmf/Sweave}
+\pagestyle{plain}
+
+
+%%% Operators
+
+\newcommand{\R}{{\mathbb R}}
+\newcommand{\N}{{\mathbb N}}
+\newcommand{\C}{{\mathbb C}}
+\newcommand{\K}{{\mathbb K}}
+\newcommand{\Z}{{\mathbb Z}}
+\DeclareMathOperator*{\var}{var}
+\DeclareMathOperator*{\cov}{cov}
+\DeclareMathOperator*{\cor}{cor}
+\DeclareMathOperator*{\tr}{tr}
+\DeclareMathOperator*{\diag}{diag}
+\DeclareMathOperator*{\E}{E}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\p}{P}
+\providecommand{\wt}[1]{\widetilde{#1}}
+\providecommand{\wh}[1]{\widehat{#1}}
+
+\providecommand{\ov}[1]{\overline{#1}}
+\providecommand{\norm}[1]{\left \lVert#1 \right \rVert}
+\newcommand{\scp}[2]{\left\langle#1, #2\right\rangle}
+%\newcommand{\op}[2]{\textbf#1\left[#2 \right]}
+\providecommand{\M}[1]{\mathbf#1}
+%\providecommand{\B}[1]{\bm#1}
+\providecommand{\mc}[1]{\mathcal#1}
+%\providecommand{\ms}[1]{\mathscr#1}
+\providecommand{\T}{\top}
+\newcommand{\sign}{\operatorname{sign}}
+%\newcommand{\argmin}{\operatorname{argmin}}
+%\newcommand{\argmax}{\operatorname{argmax}}
+\newcommand{\logit}{\operatorname{logit}}
+\newcommand{\corr}{\mathrel{\widehat{=}}}
+\newcommand{\lin}{\text{lin} \; }
+\newcommand{\dev}[2]{\Big\lvert _{{#1}={#2}}}
+\newcommand{\devs}[1]{\Big\lvert _{{#1}}}
+\newcommand{\bou}[2]{\Big\lvert _{{#1}}^{#2}}
+\newcommand{\indep}{\rotatebox[origin=c]{90}{$\models$}}
+
+\newcommand{\func}[5]{%
+	\begin{tabular}[t]{lrcl}
+	$#1$~: & $#2$ & $\rightarrow$ & $#3$\\
+	& $#4$ & $\mapsto$ & $#5$
+	\end{tabular}}
+\newcommand{\blanco}[1]{  }
+
+\newcommand{\deriv}[3]{%
+\ifthenelse{#1 = 1}{\frac{d\,#2}{d\,#3}}{\frac{d^{{#1}} #2}{d{#3}^{{#1}}}}
+} 
+
+
+\newcommand{\partials}[3]{%
+\ifthenelse{#1 = 1}{\frac{\partial\,#2}{\partial\,#3}}{\frac{\partial^{#1}
+    #2}{\partial#3^{#1}}}
+} 
+
+\def\su{\sum_{i=1}^n}
+%\def\lap{\Delta}
+%\def\etall{\mbox{{\it et al., }}}
+%\def\etal{\mbox{{\it et al. }}}
+%\def\theequation{\arabic{equation}}
+\def\sdef{\stackrel{\text{def}}{\Leftrightarrow}}
+\def \coloneq{\mathrel{\mathop:}=}
+\def \invcoloneq{=\mathrel{\mathop:}}
+%\def\ch{\varphi}  
+\def \ninf{n \; \rightarrow \; \infty}   
+%\numberwithin{equation}{section} 
+
+
+\newtheorem{theo}{Theorem}
+\newtheorem{propo}{Theorem}
+\newtheorem{definitio}{Theorem}
+\newtheorem{definitioA}{Theorem}
+\newtheorem{theoA}{Theorem}
+
+
+\newtheorem{theorem}[theo]{Theorem}
+  \newtheorem{defn}[definitio]{Definition}
+  \newtheorem{defnA}[definitioA]{Definition A.}
+  \newtheorem{theoremA}[theoA]{Theorem A.}
+  \newtheorem{prop}[propo]{Proposition}
+  
+
+\newenvironment{bew}{\begin{proof}[Proof]}{\end{proof}}
+\newenvironment{sketch}{\begin{proof}[Sketch of proof]}{\end{proof}}
+
+%% some common estimators for the sparsity section
+
+
+%\def\ols{\wh{\bm{\beta}}^{\text{ols}}}
+%\def\ridge{\wh{\bm{\beta}}^{\text{ridge}}}  
+%\def\lasso{\wh{\bm{\beta}}^{\text{lasso}}}
+
+%\newcommand{\est}[1]{%
+%\wh{\bm{\beta}}^{\text{#1}}
+%} 
+
+%\newcommand{\estj}[2]{%
+%\wh{\beta}_{{#2}}^{\text{{#1}}}
+%} 
+
+%\newcommand{\xj}[1]{%
+%\bm{x}_{\bullet #1}
+%} 
+
+\newcommand{\conv}[1]{%
+\stackrel{\text{{#1}}}{\rightarrow}
+} 
+
+%%% algorithmic section
+
+%\newcommand{\mycite}[1]{\citeauthor{#1} (\citeyear{#1}, \citep{#1})}
+
+\newcommand{\ik}{^{(k)}}
+\newcommand{\LL}{\bm{\Lambda}}
+\newcommand{\La}{\bm{L}}
+\newcommand{\Si}{\bm{\Sigma}}
+\newcommand{\bk}{\bm{\beta}\ik}
+\newcommand{\mk}{\bm{\mu}\ik}
+\newcommand{\nk}{n\ik}
+\newcommand{\bhk}{\wh{\bm{\beta}}\ik}
+\newcommand{\mhk}{\wh{\bm{\mu}}\ik}
+\newcommand{\Sih}{\wh{\Si}}
+\newcommand{\X}{\bm{X}}
+\newcommand{\Xt}{\bm{X}^{\T}}
+
+
+%\newcommand{\gr}[1]{%
+%-\nabla \ell(#1) 
+%} 
+
+%\newcommand{\he}[1]{%
+%\bm{F}(#1) 
+%} 
+
+%\newcommand{\lpen}[1]{%
+%\ell_{\text{pen}}({#1})
+%} 
+
+\def \betak{\wh{\bm{\beta}}^{(k)}}
+\def \ass{\leftarrow}
+
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+% with this we ensure that the chapter and section
+% headings are in lowercase.
+%\renewcommand{\chaptermark}[1]{%
+%\leftmark{\thechapter\ #1}}
+%\renewcommand{\sectionmark}[1]{%
+%\leftmark{\thechapter\ #1}}
+%\renewcommand{\sectionmark}[1]{%
+%\markright{\thesection\ #1}}
+%\fancyhf{} % delete current header and footer
+%\fancyhead[LE,RO]{\bfseries\thepage}
+%\fancyhead[LO]{\bfseries\leftmark}
+%\fancyhead[RE]{\bfseries\rightmark}
+%\fancyhead[RE]{\bfseries\leftmark}
+%\renewcommand{\headrulewidth}{0.5pt}
+%\renewcommand{\footrulewidth}{0pt}
+%\addtolength{\headheight}{0.5pt} % space for the rule
+%\fancypagestyle{plain}{%
+%\fancyhead{} % get rid of headers on plain pages
+%\renewcommand{\headrulewidth}{0pt} % and the line
+%}
+
+%\titleformat{\chapter}[display]{\Large\filcenter\sffamily}
+%{\titlerule[1pt]%
+%\vspace{1pt}%
+%\titlerule
+%\vspace{1pc}%
+%\titlerule
+%\textbf{\sffamily \LARGE{\chaptertitlename} \thechapter}}
+%{1pc}
+%{\titlerule
+%\vspace{1pc}%
+%\bfseries\LARGE}
+
+%\titlespacing{\chapter}{0pt}{*0.2}{*4}
+
+%\titleformat{\section}
+%{\titlerule
+%\vspace{1ex}
+%\large \bfseries
+%}{\thesection.}{0.5em}{}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

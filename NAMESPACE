@@ -1,0 +1,16 @@
+import(methods)
+importFrom(graphics, plot)
+import(stats)
+importFrom(MASS, rlm)
+import(Matrix)
+useDynLib(IPPD)
+exportClasses("peaklist", "modelfit")
+exportMethods("show", "getPeaklist","fitModelParameters", "threshold", "visualize")
+
+
+
+
+
+
+
+
