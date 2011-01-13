@@ -14,18 +14,19 @@
 \section{Slots}{
   \describe{
     \item{peaklist}{A \code{matrix} with rows equal to the number of
-  peak patterns used in fitting and four
+  peak patterns used in fitting and five
   columns. For each row (pattern), the first column
   contains the initial position of the peak pattern (\code{loc_init}, in
   Thomson), the second one
   contains the position of the most intense peak within a peak pattern
   (\code{loc_most_intense}, in Thomson), the third one contains the
-  charge state (\code{charge}), and the last 
-  one contains the intensity (\code{amplitude}).}
+  charge state (\code{charge}), the fourth one the quantification of the
+  overall intensity of the pattern (\code{quant}) and the last 
+  one contains the amplitude at the most intense peak (\code{amplitude}).}
 \item{peaklistprocessed}{The result after applying the postprocessing
   procedure to the raw list \code{peaklist}. It is a matrix of the same structure as
   \code{peaklist}, with two up to four additional columns: the fifth column contains the local noise level at the
-  position, and the last one contains the ratio of intensity to local
+  position, and the last one contains the ratio of the amplitude to local
   noise level (signal-to-noise ratio), hence quantitatively describing the significance of the
   peak pattern. If \code{goodnessoffit} has been set to \code{TRUE},
   there are two additional columns labelled \code{goodness_of_fit} and
@@ -48,7 +49,7 @@
   initial position of the peak pattern (column \code{initial}),
   the position of the most intense peak (column \code{most_intense}) and the charge
   state (column \code{charge}).}
-\item{beta}{A \code{numeric} vector storing the intensities for each
+\item{beta}{A \code{numeric} vector storing the amplitudes for each
   peak pattern in \code{book}/each column of \code{basis}, obtained by
   non-negative least squares estimation (if \code{loss = "L2"}) or by
   non-negative least absolute deviation estimation (if \code{loss = "L1"}). Hence, together with \code{book},
@@ -123,7 +124,7 @@
   fitted function should be drawn as lines in
   the panel displaying the raw spectrum (requires \code{signal =
   TRUE}). Note that the fitted function is the result of summing up all
-fitted templates multiplied by their intensity. Setting
+fitted templates multiplied by their amplitude. Setting
   \code{fittedfunction = TRUE} requires that \code{object} contains the
   matrix of basis functions.}
 \item{\code{fittedfunction.cut}}{A \code{logical} indicating whether the fitted function after cutting peak
@@ -139,7 +140,7 @@ matrix of basis functions.}
   \code{cbind(slot(object, "book"), slot(object, "beta"))}, i.e. the first
   two columns of \code{booktrue} contain initial- and most intense peak
   locations within a peak pattern, the third column contains the charge
-  state and the fourth one the intensity. \emph{Note:} the 'truth' is computed
+  state and the fourth one the amplitude of the most intense peak. \emph{Note:} the 'truth' is computed
   according to \code{slot(object, model)}. This excludes the following
   scenario: assuming that the true peak shapes is \code{"EMG"}, but the
   chosen  model is \code{"Gaussian"}. Then the true model in this function is

@@ -92,6 +92,7 @@ setMethod("threshold", signature="peaklist", function(object, threshold,
             nlssol <- nnlslogbarrier(response = y/max(y), betastart = rep(mean(noiselevel), ncol(G)), trace = trace,
                                         alpha =  0.01, gammastart = 10,
                                         gammamax = 10^15, gammamult = 20, eps = 1e-6)
+            peaklisttrunc[perm, "quant"] <- (peaklisttrunc[perm,"quant"] / peaklisttrunc[perm, "amplitude"]) * (nlssol$beta * max(y)) 
             peaklisttrunc[perm,"amplitude"] <- (nlssol$beta * max(y))
             peaklisttrunc[,"ratio"] <- peaklisttrunc[,"amplitude"] / peaklisttrunc[,"localnoise"]
             if(processed & length(object@goodnessoffit) > 0) peaklisttrunc[,"ratio_adj"] <- peaklisttrunc[,"ratio"] * peaklisttrunc[,"goodness_of_fit"]
@@ -249,7 +250,7 @@ if(signal){
 an empty basis matrix \n. Re-run with 'getPeaklist' with option 'returnbasis  = TRUE'. Note that this option is not supported if 'binning = TRUE. \n")
     
   if(fittedfunction & !fittedfunction.cut){
-    fittedall <- drop(object@basis %*% bookfitted[,4])
+    fittedall <- drop(object@basis %*% bookfitted[,5])
     lines(x[ff], fittedall[ff], type = "l", ...)
   }
 
@@ -260,7 +261,7 @@ an empty basis matrix \n. Re-run with 'getPeaklist' with option 'returnbasis  = 
      bookpostprocessed <- object@peaklistprocessed
      bookproind <- which(bookpostprocessed[,2] >= lower & bookpostprocessed[,2] <= upper)
      howmanyfunctions <- length(bookproind)
-     amplpro <- bookpostprocessed[bookproind,4]
+     amplpro <- bookpostprocessed[bookproind,5]
      chargepro <- bookpostprocessed[bookproind,3]
      positionspro <- bookpostprocessed[bookproind,2]
      if(length(positionspro) > 0){
@@ -289,7 +290,7 @@ an empty basis matrix \n. Re-run with 'getPeaklist' with option 'returnbasis  = 
  }    
 
    if(fittedfunction & fittedfunction.cut){
-     fittedall <- drop(object@basis %*% bookfitted[,4])
+     fittedall <- drop(object@basis %*% bookfitted[,5])
      lines(x[ff], fittedall[ff], type = "l", main = "fitted function", ...)
      if(!is.character(all.equal(object@peaklistprocessed, matrix(0))))
        bookpostprocessed <- object@peaklist
@@ -297,7 +298,7 @@ an empty basis matrix \n. Re-run with 'getPeaklist' with option 'returnbasis  = 
        bookpostprocessed <- object@peaklistprocessed
      bookproind <- which(bookpostprocessed[,2] >= lower & bookpostprocessed[,2] <= upper)
      howmanyfunctions <- length(bookproind)
-     amplpro <- bookpostprocessed[bookproind,4]
+     amplpro <- bookpostprocessed[bookproind,5]
      chargepro <- bookpostprocessed[bookproind,3]
      positionspro <- bookpostprocessed[bookproind,2]
      if(length(positionspro) > 0){
@@ -331,7 +332,7 @@ an empty basis matrix \n. Re-run with 'getPeaklist' with option 'returnbasis  = 
   if(fitted){
     bookfittedind <- which(bookfitted[,2] >= lower & bookfitted[,2] <= upper)
     howmanyfitted <- length(bookfittedind)
-    amplfitted <- bookfitted[bookfittedind,4]
+    amplfitted <- bookfitted[bookfittedind,5]
     oo <- order(amplfitted, decreasing = TRUE)
     amplfitted <- amplfitted[oo]
     positionsfitted <- bookfitted[bookfittedind,2][oo]
@@ -370,7 +371,7 @@ if(postprocessed){
   bookproind <- which(bookpostprocessed[,2] >= lower & bookpostprocessed[,2] <= upper)
   if(length(bookproind) > 0){
   howmanyfunctions <- length(bookproind)
-  amplpro <- bookpostprocessed[bookproind,4]
+  amplpro <- bookpostprocessed[bookproind,5]
   ooo <- order(amplpro, decreasing = TRUE)
   amplpro <- amplpro[ooo]
   positionspro <- bookpostprocessed[bookproind,2][ooo]

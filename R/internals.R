@@ -3,12 +3,12 @@
 localnoise <- function(y, window, quantiledist = 0.1){
   if((window %% 2) == 0)
     stop("window width should be odd \n")
-   quantileseq <- seq(from = 0, to = 1, by = quantiledist)
+  quantileseq <- seq(from = 0, to = 1, by = quantiledist)
    qindex <- pmax(floor(window * quantileseq), 1)
    nquantiles <- length(qindex)
    halfwindow <- max(floor(window/2), 1)
   
-   n <- length(y)
+  n <- length(y)
    
    q <- matrix(nrow = n, ncol = nquantiles, data = 0)
    
@@ -16,7 +16,7 @@ localnoise <- function(y, window, quantiledist = 0.1){
    sorty <- sort(y[1:window])
   
    q[1:(halfwindow + 1),] <- rep(sorty[qindex], each= halfwindow + 1)
-   
+  
   
    Cres <- .C("localquantile", y = as.double(y), sorty = as.double(sorty),
               indexsort = as.integer(indexsort - 1), window = as.integer(window),
@@ -63,9 +63,10 @@ calculatebasis.gaussian <- function(x, positions = x, sigma, charges = c(1,2,3,4
     chargel <- charges[l]
     amplitudes <- getpeakheights(positions * chargel)
     ### ell-infinity normalization 
-    amplitudes <- t(apply(amplitudes, 1, function(z) z/max(z)))
+    amplitudes <- t(apply(amplitudes, 1, function(z) {maxz = max(z); c(z/maxz, maxz)}))
     ###
-    npeaks <- ncol(amplitudes)
+    npeaks <- ncol(amplitudes) - 1
+    ainf <- amplitudes[, (npeaks + 1), drop = FALSE] 
     centers <- positions + kappa * t(apply(amplitudes, 1, function(z) {origin <- which.max(z); if((origin > 1) & (origin < npeaks)) ret <- c((-1)*((origin-1):1), 0, 1:(npeaks-origin));
                                                                       if(origin == 1) ret <- (0:(npeaks - 1));
                                                                       if((origin == npeaks)) ret <- (-1) * ((npeaks-1):0); ret}))/chargel
@@ -131,11 +132,11 @@ calculatebasis.gaussian <- function(x, positions = x, sigma, charges = c(1,2,3,4
        Phi <- cbind2(Phi, temp) 
      }
      ###
-     bookl <- cbind(initials, positions, chargel)[!remove,,drop = FALSE]
+     bookl <- cbind(initials, positions, chargel, ainf)[!remove,,drop = FALSE]
      book <- rbind(book, bookl)
   }
 
-  colnames(book) <- c("initial", "most_intense", "charge")
+  colnames(book) <- c("initial", "most_intense", "charge", "a_inf")
   return(list(Phi = Phi, book = book))
 
 
@@ -164,12 +165,14 @@ calculatebasis.emg <- function(x, positions = x, alpha, sigma, mu, charges = c(1
   for(l in seq(along = charges)){
     chargel <- charges[l]
     amplitudes <- getpeakheights(positions*chargel)
-     amplitudes <- scale * t(apply(amplitudes, 1, function(z) z/max(z))) 
-     npeaks <- ncol(amplitudes)
-     centers <- positions + kappa * t(apply(amplitudes, 1, function(z) {origin <- which.max(z); if((origin > 1) & (origin < npeaks)) ret <- c((-1)*((origin-1):1), 0, 1:(npeaks-origin));
+    amplitudes <- t(apply(amplitudes, 1, function(z) {maxz = max(z); c(z/maxz, maxz)}))
+    ###
+    npeaks <- ncol(amplitudes) - 1
+    ainf <- amplitudes[, (npeaks + 1), drop = FALSE] 
+    centers <- positions + kappa * t(apply(amplitudes, 1, function(z) {origin <- which.max(z); if((origin > 1) & (origin < npeaks)) ret <- c((-1)*((origin-1):1), 0, 1:(npeaks-origin));
                                                                       if(origin == 1) ret <- (0:(npeaks - 1));
                                                                       if((origin == npeaks)) ret <- (-1) * ((npeaks-1):0); ret}))/chargel
-     initials <- apply(centers, 1, min) 
+    initials <- apply(centers, 1, min) 
     #if(filter){
     #  filtered <- .C("mzfilter", positions = as.double(initials), npositions = as.integer(length(initials)),
     #                 charge = as.integer(chargel),  filteredout = integer(length(initials)))
@@ -226,12 +229,12 @@ calculatebasis.emg <- function(x, positions = x, alpha, sigma, mu, charges = c(1
        Phi <- cbind2(Phi, temp) 
      }
 
-     bookl <- cbind(initials, positions, chargel)[!remove,,drop = FALSE]
+     bookl <- cbind(initials, positions, chargel, ainf)[!remove,,drop = FALSE]
     
      book <- rbind(book, bookl)  
   }
 
-  colnames(book) <- c("initial", "most_intense", "charge")
+  colnames(book) <- c("initial", "most_intense", "charge", "a_inf")
   return(list(Phi = Phi, book = book)) 
 
 }
@@ -353,7 +356,7 @@ while(l <= nrow(peaklisto)){
     l <- l + 1
   }
   else{
-     whichmaxampl <- which.max(peaklisto[l:(l+indexplus),4])
+     whichmaxampl <- which.max(peaklisto[l:(l+indexplus),5])
      indtoadd <- (l:(l + indexplus))[whichmaxampl]
      peaklistrem <- rbind(peaklistrem, peaklisto[indtoadd,])
      l <- l + indexplus + 1
@@ -386,12 +389,13 @@ while(length(focus) >= 1){
        collect <- indeltawindow[samecharge]
        initial <- peaklistrem[collect, 1]
        mus <- peaklistrem[collect,2]
-       betas <- peaklistrem[collect,4]
-       sigmaloc <- peaklistrem[loc,5]
+       betas <- peaklistrem[collect,5]
+       ainf <- peaklistrem[collect, 4]
+       sigmaloc <- peaklistrem[loc,6]
        img <- intermediategaussian(mus, betas,  sigma = sigmaloc)
        shift <- img$mu - mus[which.max(betas)]
        initialnew <- initial[which.max(betas)] + shift 
-       peaklistnew <- rbind(peaklistnew, c(initialnew, img$mu, chargeloc, img$beta, sigmaloc))    
+       peaklistnew <- rbind(peaklistnew, c(initialnew, img$mu, chargeloc, mean(ainf), img$beta, sigmaloc))    
        focus <- setdiff(focus, collect)
      }
   }
@@ -404,7 +408,7 @@ while(length(focus) >= 1){
 
 }
 
-return(peaklistrem[,-5, drop = FALSE])
+return(peaklistrem[,-6, drop = FALSE])
 
 }
 
@@ -528,13 +532,14 @@ while(length(focus) >= 1){
      else{
        collect <- indeltawindow[samecharge]
        initial <- peaklistrem[collect, 1]
-       betas <- peaklistrem[collect,4]
+       betas <- peaklistrem[collect,5]
        alphaloc <- alpha(peaklistrem[loc,2])
        sigmaloc <- sigma(peaklistrem[loc,2])
        muloc <- mu(peaklistrem[loc,2])
        modelocres <- determinemode(alphaloc, sigmaloc, muloc)
        shiftloc <- -modelocres$mode
        scaleloc <- 1/modelocres$val
+       ainfloc <- mean(peaklistrem[collect,4])
        mus <- peaklistrem[collect,2] + (muloc + shiftloc)
       
        lowmu <- min(mus)
@@ -556,9 +561,9 @@ while(length(focus) >= 1){
        imemg <- intermediateemg(mus, betas * scaleloc,  alpha = alphaloc, sigma = sigmaloc, npoints = npoints * npointsfac, low = low, upp = upp)
        shiftmu <- imemg$mu - mus[which.max(betas)]
        initialnew <- initial[which.max(betas)] + shiftmu
-       newrow <- c(initialnew, imemg$mu - muloc - shiftloc, chargeloc, imemg$beta / scaleloc)
+       newrow <- c(initialnew, imemg$mu - muloc - shiftloc, chargeloc, ainfloc, imemg$beta / scaleloc)
        acceptnewrow = TRUE
-       if(any(newrow[4] + sqrt(eps) < betas)){
+       if(any(newrow[5] + sqrt(eps) < betas)){
          acceptnewrow <- FALSE
          #browser()
        }

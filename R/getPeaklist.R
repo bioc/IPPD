@@ -116,7 +116,7 @@ if(trace) cat("Computing local noise level ... \n")
            }
            else window <- windowtemp 
            # window.mz <- control.localnoise$window
-           #spacing.median <- median(diff(x))
+                                        #spacing.median <- median(diff(x))
            #spacing.mz <- x[floor(n/2) + 1] - x[floor(n/2)]
            #if(spacing.mz > 1.5 * spacing.median) spacing.mz <- spacing.median
            #window <- ceiling(window.mz / spacing.mz)
@@ -447,11 +447,11 @@ knots <- seq(from = minx, to = maxx, by =(1+tol))
 
  if(trace) cat("Generating peaklist ... \n")
         locnoiseindices <- findInterval(book[,2], x)
-        cutoff <- locnoise.cutoff[locnoiseindices]
+cutoff <- locnoise.cutoff[locnoiseindices]
         peaklist <-   cbind(book, beta)
         orr <- order(peaklist[,1])
         peaklisto <- peaklist[orr, , drop = FALSE]
-        colnames(peaklisto) <- c("loc_init", "loc_most_intense", "charge", "amplitude")
+        colnames(peaklisto) <- c("loc_init", "loc_most_intense", "charge", "quant", "amplitude")
         if(postprocessing){
          ##################################################################################
             presel <- peaklisto[,"amplitude"] > factor.post * cutoff
@@ -505,7 +505,7 @@ knots <- seq(from = minx, to = maxx, by =(1+tol))
         if(inherits(peaklistprocessed, "try-error")){
           warning("Post-processing failed; try to reduce 'ppm' \n")
           peaklistprocessed <- matrix(0)
-          gof <- numeric(0) 
+          gof <- numeric(0)
         }
             
         else{
@@ -523,7 +523,7 @@ knots <- seq(from = minx, to = maxx, by =(1+tol))
             if(is.null(factor.prune)) factor.prune <- 0.05
             indexprune <- findInterval(peaklistprocessed[,2], x)
             cutoff.prune <- locnoise[,"1"][indexprune]
-            pruned <- peaklistprocessed[,4] < (cutoff.prune * factor.prune)
+            pruned <- peaklistprocessed[,5] < (cutoff.prune * factor.prune)
             peaklistprocessed <- peaklistprocessed[!pruned,,drop = FALSE]
           }
           #################################################################
@@ -677,12 +677,13 @@ knots <- seq(from = minx, to = maxx, by =(1+tol))
           #################################################################
           locnoiseindices   <- findInterval(peaklistprocessed[,2], x)
           peaklistprocessed <- cbind(peaklistprocessed, locnoise.cutoff[locnoiseindices])
-          peaklistprocessed <- cbind(peaklistprocessed, peaklistprocessed[,4] / peaklistprocessed[,5])
-          colnames(peaklistprocessed) <- c("loc_init", "loc_most_intense", "charge", "amplitude", "localnoise", "ratio") 
+          peaklistprocessed <- cbind(peaklistprocessed, peaklistprocessed[,5] / peaklistprocessed[,6])
+          peaklistprocessed[,4] <- peaklistprocessed[,5] / peaklistprocessed[,4] ### return quantification
+          colnames(peaklistprocessed) <- c("loc_init", "loc_most_intense", "charge", "quant", "amplitude", "localnoise", "ratio") 
           #################################################################
           if(goodnessoffit){
           peaklistprocessed <- cbind(peaklistprocessed, goodness_of_fit = gof[locnoiseindices],
-                                     ratio_adj = peaklistprocessed[,6] * gof[locnoiseindices])                               
+                                     ratio_adj = peaklistprocessed[,7] * gof[locnoiseindices])                               
          }
         }
             }
@@ -691,7 +692,9 @@ knots <- seq(from = minx, to = maxx, by =(1+tol))
 else{
      peaklistprocessed <- matrix(0)
      gof <- numeric(0)
-   }         
+   }
+
+peaklisto[,4] <- peaklisto[,5]/peaklisto[,4]
             
 if(returnbasis)
  new("peaklist",  peaklist = peaklisto, peaklistprocessed = peaklistprocessed,
