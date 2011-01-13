@@ -205,7 +205,7 @@ relevant information, we discard all channels above $2500$.
 
 <<setup, echo=FALSE, results=hide>>= 
 
-options(prompt = "R> ", continue = " ", warn = -1, width = 80)                                       
+options(prompt = "R> ", continue = " ", warn = -1, width = 90)                                       
 
 @
 
@@ -228,7 +228,8 @@ layout(matrix(c(1,2), 1, 2))
 plot(x[1:1000], y[1:1000], xlab = expression(x[1]~~ldots~~x[1000]), 
      cex.lab = 1.5, cex.axis = 1.25, ylab = expression(y))
 
-plot(x[x >= 804 & x <= 807], y[x >= 804 & x <= 807], xlab = "x: 804 <= x <= 807", 
+plot(x[x >= 804 & x <= 807], y[x >= 804 & x <= 807], 
+     xlab = "x: 804 <= x <= 807", 
      cex.lab = 1.5, cex.axis = 1.25, ylab = expression(y), type = "b")
 
 layout(matrix(1))
@@ -278,9 +279,11 @@ a rather poor fit here.
 <<assessfit, fig=TRUE>>=
 
 show(fitEMG)
-mse.EMG <- data.frame(mse = slot(fitEMG,"peakfitresults")[,"rss"] / slot(fitEMG,"peakfitresults")[,"datapoints"], 
+mse.EMG <- data.frame(mse = slot(fitEMG,"peakfitresults")[,"rss"] 
+                      / slot(fitEMG,"peakfitresults")[,"datapoints"], 
                       peakshape = rep("EMG", nrow( slot(fitEMG,"peakfitresults"))))
-mse.Gauss <- data.frame(mse = slot(fitGauss,"peakfitresults")[,"rss"] / slot(fitGauss,"peakfitresults")[,"datapoints"], 
+mse.Gauss <- data.frame(mse = slot(fitGauss,"peakfitresults")[,"rss"] 
+                        / slot(fitGauss,"peakfitresults")[,"datapoints"], 
                         peakshape = rep("Gaussian", nrow( slot(fitGauss,"peakfitresults"))))
 mses <- rbind(mse.EMG, mse.Gauss)
 with(mses, boxplot(mse ~ peakshape, cex.axis = 1.5, cex.lab = 1.5, ylab = "MSE"))
@@ -298,7 +301,9 @@ $\sigma$, we use again the function \texttt{visualize} as follows:
 
 <<assessfit2, fig=TRUE>>=
 
-visualize(fitEMG, type = "model", modelfit = TRUE, parameters = c("sigma", "alpha"), cex.lab = 1.5, cex.axis = 1.25)
+visualize(fitEMG, type = "model", modelfit = TRUE, 
+          parameters = c("sigma", "alpha"), 
+          cex.lab = 1.5, cex.axis = 1.25)
 
 @
 
@@ -425,14 +430,15 @@ spectrum where the intensity is at least two times the LNL; the fit is least
 squares (\texttt{loss =  L2});
 postprocessing is performed by merging peaks within
 a tolerance of 200 ppm. Subsequently, only the patterns with signal-to-noise
-ratio bigger than three are maintained. It has the following form.
+ratio bigger than three are maintained. The result is of the following form.
 
+%\scriptsize{
 <<showlist>>=
 
 threshold(EMGlist, threshold = 3, refit = TRUE, trace = FALSE)
 
 @ 
-
+%}
 The results can be examined in detail graphically. We finally present some
 selected regions to demonstrate that our method performs well. The pre-defined
 method \texttt{visualize} can be used display the template fitting at several
