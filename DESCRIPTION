@@ -1,6 +1,6 @@
 Package: IPPD
 Title: Isotopic peak pattern deconvolution for Protein Mass Spectrometry by template matching
-Version: 1.2.0
+Version: 1.3.0
 Date: 2011-01-12
 Author: Martin Slawski <ms@cs.uni-sb.de>, Rene Hussong <rene@bioinf.uni-sb.de>, Matthias Hein <hein@cs.uni-sb.de>
 Maintainer: Martin Slawski <ms@cs.uni-sb.de>
