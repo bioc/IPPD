@@ -34,7 +34,7 @@
 \tabular{ll}{
 Package: \tab IPPD\cr
 Type: \tab Package\cr
-Version: \tab 0.99.2\cr
+Version: \tab 1.3.1\cr
 Date: \tab 2012-01-17\cr
 License: \tab GPL (version 2 or later) \cr
 }
