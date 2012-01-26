@@ -3,9 +3,12 @@ importFrom(graphics, plot)
 import(stats)
 importFrom(MASS, rlm)
 import(Matrix)
+import(XML)
+import(digest)
 useDynLib(IPPD)
 exportClasses("peaklist", "modelfit")
 exportMethods("show", "getPeaklist","fitModelParameters", "threshold", "visualize")
+export("sweepline", "analyzeLCMS", "read.mzXML", "new.mzXML")
 
 
 

@@ -32,6 +32,7 @@
 \alias{formulacoef2function}
 \alias{simplepeakdetect}
 \alias{tableaveragine}
+\alias{examples_boxes}
 \alias{nnladlogbarrier}
 \alias{linesearchlad}
 \alias{calculatedenoisingbasis.gaussian}

@@ -1,6 +1,6 @@
 setGeneric("getPeaklist", function(mz, intensities, model = c("Gaussian", "EMG"), 
                                    model.parameters = list(alpha = function(){},
-                                   sigma = function(){},
+                                     sigma = function(){},
                                    mu = function(){}),
                                    loss = c("L2", "L1"), 
                                    binning = FALSE,
@@ -123,11 +123,10 @@ if(trace) cat("Computing local noise level ... \n")
          #}
          #}
 
-         if(window <= 0 | window > n)
-            stop("'window' must be between 0 and length('mz') \n")
+         if((window %% 2) == 0) window <- window + 1
 
-  if((window %% 2) == 0) window <- window + 1
-
+         if(window > n) window <- window - 2
+    
 ###############################################################################
 
 if(is.null(control.localnoise$factor.place))

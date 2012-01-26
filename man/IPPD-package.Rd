@@ -34,17 +34,17 @@
 \tabular{ll}{
 Package: \tab IPPD\cr
 Type: \tab Package\cr
-Version: \tab 1.0.0\cr
-Date: \tab 2010-09-09\cr
+Version: \tab 0.99.2\cr
+Date: \tab 2012-01-17\cr
 License: \tab GPL (version 2 or later) \cr
 }
 }
 \author{
-  Martin Slawski \email{ms@cs.uni-sb.de}, \cr
-  Rene Hussong \email{rene@bioinf.uni-sb.de}, \cr
-  Matthias Hein \email{hein@cs.uni-sb.de}
+  Martin Slawski \email{ms@cs.uni-saarland.de}, \cr
+  Rene Hussong \email{rene.hussong@uni.lu}, \cr
+  Matthias Hein \email{hein@cs.uni-saarland.de}
 
-  Maintainer: Martin Slawski \email{ms@cs.uni-sb.de}.
+  Maintainer: Martin Slawski \email{ms@cs.uni-saarland.de}.
 }
 \keyword{models}
  
