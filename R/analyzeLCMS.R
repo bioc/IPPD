@@ -65,6 +65,11 @@ analyzeLCMS <- function(data, arglist.fitModelParameters = list(),
   if(format == "mzXML"){
  
     scans <- data$scan
+
+    isnull <- unlist(lapply(scans, function(z) is.null(z)))
+    
+    scans <- scans[!isnull]
+    
     msone <- unlist( lapply(scans, function(z) z$msLevel) )
     if( sum(msone == 1) == 0)
       stop("No valid spectra (msLevel == 1) found \n")
