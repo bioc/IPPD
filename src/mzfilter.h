@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <math.h>
 
-static void mzfilter(double *positions, int *npositions, int *charge, int *filteredout){
+void mzfilterrev(double *positions, int *npositions, int *charge, int *filteredout){
 		
 double PEPTIDE_MASS_RULE_FACTOR = 0.000507f;
+double PROTON_MASS = 1.00727646688f;
 double PEPTIDE_MASS_RULE_BOUND = 	1./PEPTIDE_MASS_RULE_FACTOR;
 double PEPTIDE_MASS_RULE_THEO_PPM_BOUND = 200;
 double mass;
@@ -16,7 +17,7 @@ double new_frac_mass;
 
 
 for(j = 0; j < *npositions; j++){
-  mass = positions[j] * (*charge);
+  mass = positions[j] * (*charge) - (*charge)*PROTON_MASS;
   correction_fac =  mass / PEPTIDE_MASS_RULE_BOUND;
    old_frac_mass = mass - (int)(mass);
    new_mass = ((int)(mass))* (1.+PEPTIDE_MASS_RULE_FACTOR)-(int)(correction_fac);
