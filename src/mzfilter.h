@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 
-void mzfilterrev(double *positions, int *npositions, int *charge, int *filteredout){
+void mzfilter(double *positions, int *npositions, int *charge, int *filteredout){
 		
 double PEPTIDE_MASS_RULE_FACTOR = 0.000507f;
 double PROTON_MASS = 1.00727646688f;
