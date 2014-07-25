@@ -1,178 +1,233 @@
 ### 1. Computation of localnoise level: localnoise()
 
-localnoise <- function(y, window, quantiledist = 0.1){
-  if((window %% 2) == 0)
-    stop("window width should be odd \n")
-  quantileseq <- seq(from = 0, to = 1, by = quantiledist)
-   qindex <- pmax(floor(window * quantileseq), 1)
-   nquantiles <- length(qindex)
-   halfwindow <- max(floor(window/2), 1)
+localnoise <- function(y, window, quantiledist = 0.1) {
+    if ((window %% 2) == 0) {
+        stop("window width should be odd \n")
+    }
+
+    quantileseq <- seq(from = 0, to = 1, by = quantiledist)
+    qindex <- pmax(floor(window * quantileseq), 1)
+    nquantiles <- length(qindex)
+    halfwindow <- max(floor(window/2), 1)
   
-  n <- length(y)
+    n <- length(y)
    
-   q <- matrix(nrow = n, ncol = nquantiles, data = 0)
+    q <- matrix(nrow = n, ncol = nquantiles, data = 0)
    
-   indexsort <- rank(y[1:window], ties.method = "first")
-   sorty <- sort(y[1:window])
+    indexsort <- rank(y[1:window], ties.method = "first")
+    sorty <- sort(y[1:window])
   
-   q[1:(halfwindow + 1),] <- rep(sorty[qindex], each= halfwindow + 1)
+    q[1:(halfwindow + 1),] <- rep(sorty[qindex], each= halfwindow + 1)
   
   
-   Cres <- .C("localquantile", y = as.double(y), sorty = as.double(sorty),
-              indexsort = as.integer(indexsort - 1), window = as.integer(window),
-              halfwindow = as.integer(halfwindow), n = as.integer(n),
-              flag = as.integer(0), q = as.double(q), qindex = as.integer(qindex - 1), nquantiles = as.integer(nquantiles))
+    Cres <- .C("localquantile",
+               y = as.double(y),
+               sorty = as.double(sorty),
+               indexsort = as.integer(indexsort - 1),
+               window = as.integer(window),
+               halfwindow = as.integer(halfwindow),
+               n = as.integer(n),
+               flag = as.integer(0),
+               q = as.double(q),
+               qindex = as.integer(qindex - 1),
+               nquantiles = as.integer(nquantiles))
 
+    q <- matrix(Cres$q, nrow = n, ncol = nquantiles)              
 
-   q <- matrix(Cres$q, nrow = n, ncol = nquantiles)              
+    q[((n- halfwindow)+1):n,] <- rep(q[n - halfwindow,], each = halfwindow)
 
+    colnames(q) <- as.character(round(quantileseq, 2))
 
-   q[((n- halfwindow)+1):n,] <-  rep(q[n - halfwindow,], each = halfwindow)
-
-
-   colnames(q) <- as.character(round(quantileseq, 2))
-   return(q)
+    return(q)
 }
 
-### 2. calculation of peakheighs according to the averagine model
+### 2. calculation of peakheights according to the averagine model
 
-getpeakheights <- function(mass){
- data(tableaveragine)
- tabb <- as.matrix(tableaveragine)
- endpoints <- tabb[,1]
- amplitudes <- tabb[,-1]
- ### currently: at most 31 peaks
- peakheights <- matrix(0, nrow = length(mass), ncol = 31)
- dismass <- as.numeric(cut(mass, breaks = c(-Inf, endpoints, Inf)))
- peakheights <- .C("interpolatepeakheights", peakheights = peakheights, dismass = as.integer(dismass), mass = as.double(mass),
-                   endpoints = as.double(endpoints), amplitudes = amplitudes, maxnpeaks = as.integer(31),  numbermass = as.integer(length(mass)), maxdismass = as.integer(length(endpoints)))$peakheights
+getpeakheights <- function(mass, averagine.table) {
+    data(averagine.table)
+    tabb <- as.matrix(tableaveragine)
+    endpoints <- tabb[,1]
+    amplitudes <- tabb[,-1]
 
- peakheights
+    ### currently: at most 31 peaks
+    peakheights <- matrix(0, nrow = length(mass), ncol = 31)
+    dismass <- as.numeric(cut(mass, breaks = c(-Inf, endpoints, Inf)))
+    peakheights <- .C("interpolatepeakheights",
+                      peakheights = peakheights,
+                      dismass = as.integer(dismass),
+                      mass = as.double(mass),
+                      endpoints = as.double(endpoints),
+                      amplitudes = amplitudes,
+                      maxnpeaks = as.integer(31),
+                      numbermass = as.integer(length(mass)),
+                      maxdismass = as.integer(length(endpoints)))$peakheights
+
+    peakheights
 }
 
 ### 3. Computation of Phi-matrix for model = Gaussian
 
-calculatebasis.gaussian <- function(x, positions = x, sigma, charges = c(1,2,3,4), eps = 1e-05, uppernonzero = 10^7){
-  n <- length(x)
-  positions <- unique(positions)
-  positions <- sort(positions)
-  npositions <- length(positions)
-  kappa <- 1.008
-  book <- NULL
-  for(l in seq(along = charges)){
-    chargel <- charges[l]
-    amplitudes <- getpeakheights(positions * chargel)
-    ### ell-infinity normalization 
-    amplitudes <- t(apply(amplitudes, 1, function(z) {maxz = max(z); c(z/maxz, maxz)}))
-    ###
-    npeaks <- ncol(amplitudes) - 1
-    ainf <- amplitudes[, (npeaks + 1), drop = FALSE] 
-    centers <- positions + kappa * t(apply(amplitudes, 1, function(z) {origin <- which.max(z); if((origin > 1) & (origin < npeaks)) ret <- c((-1)*((origin-1):1), 0, 1:(npeaks-origin));
-                                                                      if(origin == 1) ret <- (0:(npeaks - 1));
-                                                                      if((origin == npeaks)) ret <- (-1) * ((npeaks-1):0); ret}))/chargel
-    initials <- apply(centers, 1, min)
-    ### filtering (optional)
-    #if(filter){
-    #  
-    #  filtered <- .C("mzfilter", positions = as.double(initials), npositions = as.integer(length(initials)),
-    #                 charge = as.integer(chargel),  filteredout = integer(length(initials)))
-    #   centers[as.logical(filtered$filteredout),] <- 0
-    # }
+calculatebasis.gaussian <- function(x, positions = x, sigma, charges = c(1,2,3,4),
+                                    eps = 1e-05, uppernonzero = 10^7, averagine.table) {
+    n <- length(x)
 
-    #if(!is.null(epslocal) & !is.null(y)){
-    #  if(length(epslocal) != length(x))
-    #    stop("Length of 'epslocal' has to be equal to the length of 'x' \n")
-    #  start <- apply(amplitudes, 1, which.max) - 1
-    #  centersC <- .C("patterntruncate", centers = centers, amplitudes = amplitudes, x = as.double(x), y = as.double(y),
-    #                localeps = as.double(epslocal), start = as.integer(start), n = as.integer(n), npostions = as.integer(npositions),
-    #                npeaks = as.integer(npeaks), flag = as.integer(0))
-    #  centers <- matrix(nrow = npositions, ncol = npeaks, data = centersC$centers)
-    #}
-    #else{
-      centers[centers > max(x)] <- 0
-      centers[centers < min(x)] <- 0
-    #}
-     block <- matrix(0, nrow = uppernonzero, ncol = 3)
+    positions <- unique(positions)
+    positions <- sort(positions)
 
-    
-      
+    npositions <- length(positions)
 
-    sigmal <- sigma(positions)
+    kappa <- 1.008
+    book <- NULL
+
+    for (l in seq(along = charges)) {
+        chargel <- charges[l]
+        amplitudes <- getpeakheights(positions * chargel, averagine.table)
+
+        ### ell-infinity normalization 
+        amplitudes <- t(apply(amplitudes, 1, function(z) {maxz = max(z); c(z/maxz, maxz)}))
+        ###
+
+        npeaks <- ncol(amplitudes) - 1
+        ainf <- amplitudes[, (npeaks + 1), drop = FALSE] 
+        centers <- positions + kappa * t(apply(amplitudes, 1, 
+                                               function(z) {
+                                                   origin <- which.max(z)
+                                                   
+                                                   if ((origin > 1) & (origin < npeaks)) { 
+                                                       ret <- c((-1)*((origin-1):1), 0, 1:(npeaks-origin))
+                                                   }
+                                                   
+                                                   if (origin == 1) {
+                                                       ret <- (0:(npeaks - 1))
+                                                   }
+
+                                                   if ((origin == npeaks)) {
+                                                       ret <- (-1) * ((npeaks-1):0)
+                                                   }
+                                                   
+                                                   ret})) / chargel
+        initials <- apply(centers, 1, min)
+        ### filtering (optional)
+        #if(filter){
+        #
+        #  filtered <- .C("mzfilter", positions = as.double(initials), npositions = as.integer(length(initials)),
+        #                 charge = as.integer(chargel),  filteredout = integer(length(initials)))
+        #   centers[as.logical(filtered$filteredout),] <- 0
+        # }
+
+        #if(!is.null(epslocal) & !is.null(y)){
+        #  if(length(epslocal) != length(x))
+        #    stop("Length of 'epslocal' has to be equal to the length of 'x' \n")
+        #  start <- apply(amplitudes, 1, which.max) - 1
+        #  centersC <- .C("patterntruncate", centers = centers, amplitudes = amplitudes, x = as.double(x), y = as.double(y),
+        #                localeps = as.double(epslocal), start = as.integer(start), n = as.integer(n), npostions = as.integer(npositions),
+        #                npeaks = as.integer(npeaks), flag = as.integer(0))
+        #  centers <- matrix(nrow = npositions, ncol = npeaks, data = centersC$centers)
+        #}
+        #else{
+        centers[centers > max(x)] <- 0
+        centers[centers < min(x)] <- 0
+#}
+        block <- matrix(0, nrow = uppernonzero, ncol = 3)
+
+        sigmal <- sigma(positions)
    
-    rangecenters <- apply(centers, 1, function(z){
-                                                 if(all(z == 0)) return(c(0,0))
-                                                 else return(range(z[z > 0]))})
-    fence <- sqrt(-log(eps) * sigmal)
+        rangecenters <- apply(centers, 1, function(z) {
+            if (all(z == 0))
+                return(c(0,0))
+            else
+                return(range(z[z > 0]))})
+
+        fence <- sqrt(-log(eps) * sigmal)
     
-    
-       resultC <- .C("gaussbasis", block = block, x = as.double(x), amplitudes = amplitudes,
-                              centers = centers, npositions = as.integer(npositions), n = as.integer(n), maxnpeaks = as.integer(npeaks),
-                              sigma = as.double(sigmal), nonzero = as.integer(-1), eps = as.double(eps), uppernonzero = as.integer(uppernonzero),
-                              lower = rangecenters[1,] - fence, upper = rangecenters[2,] + fence, colmax = double(npositions))
+        resultC <- .C("gaussbasis", 
+                       block = block,
+                       x = as.double(x),
+                       amplitudes = amplitudes,
+                       centers = centers,
+                       npositions = as.integer(npositions),
+                       n = as.integer(n),
+                       maxnpeaks = as.integer(npeaks),
+                       sigma = as.double(sigmal),
+                       nonzero = as.integer(-1),
+                       eps = as.double(eps),
+                       uppernonzero = as.integer(uppernonzero),
+                       lower = rangecenters[1,] - fence,
+                       upper = rangecenters[2,] + fence,
+                       colmax = double(npositions))
 
-    if((resultC$nonzero +1) == 0) next
+        if ((resultC$nonzero +1) == 0)
+            next
 
-    if(!exists("Phi")){
-       temp <- sparseMatrix(i = as.integer(resultC$block[1:(resultC$nonzero + 1), 1]),
-                                  j = as.integer(resultC$block[1:(resultC$nonzero + 1), 2]),
-                                  x = resultC$block[1:(resultC$nonzero + 1), 3],
-                                  dims = c(n, npositions))
-       remove <- resultC$colmax == 0
-       Phi <- temp[,!remove,drop = FALSE] %*% Diagonal(n = sum(!remove), 1/resultC$colmax[!remove])
-     }
+        if (!exists("Phi")) {
+            temp <- sparseMatrix(i = as.integer(resultC$block[1:(resultC$nonzero + 1), 1]),
+                                 j = as.integer(resultC$block[1:(resultC$nonzero + 1), 2]),
+                                 x = resultC$block[1:(resultC$nonzero + 1), 3],
+                                 dims = c(n, npositions))
 
-     else{
-       temp <- sparseMatrix(i = as.integer(resultC$block[1:(resultC$nonzero + 1), 1]),
-                                  j = as.integer(resultC$block[1:(resultC$nonzero + 1), 2]),
-                                  x = resultC$block[1:(resultC$nonzero + 1), 3],
-                                  dims = c(n, npositions))
+            remove <- resultC$colmax == 0
+            Phi <- temp[,!remove,drop = FALSE] %*% Diagonal(n = sum(!remove), 1/resultC$colmax[!remove])
+        } else {
+            temp <- sparseMatrix(i = as.integer(resultC$block[1:(resultC$nonzero + 1), 1]),
+                                 j = as.integer(resultC$block[1:(resultC$nonzero + 1), 2]),
+                                 x = resultC$block[1:(resultC$nonzero + 1), 3],
+                                 dims = c(n, npositions))
        
-       remove <- resultC$colmax == 0
-       temp <- temp[,!remove,drop = FALSE] %*% Diagonal(n = sum(!remove), 1/resultC$colmax[!remove])
-       Phi <- cbind2(Phi, temp) 
-     }
-     ###
-     bookl <- cbind(initials, positions, chargel, ainf)[!remove,,drop = FALSE]
-     book <- rbind(book, bookl)
-  }
+            remove <- resultC$colmax == 0
+            temp <- temp[,!remove,drop = FALSE] %*% Diagonal(n = sum(!remove), 1/resultC$colmax[!remove])
+            Phi <- cbind2(Phi, temp) 
+        }
+        ###
+        bookl <- cbind(initials, positions, chargel, ainf)[!remove,,drop = FALSE]
+        book <- rbind(book, bookl)
+    }
 
-  colnames(book) <- c("initial", "most_intense", "charge", "a_inf")
-  return(list(Phi = Phi, book = book))
-
-
+    colnames(book) <- c("initial", "most_intense", "charge", "a_inf")
+    return (list(Phi = Phi, book = book))
 }
 
 
 ### 4. Computation of Phi-matrix for model = EMG
 
-calculatebasis.emg <- function(x, positions = x, alpha, sigma, mu, charges = c(1,2,3,4), eps = 1e-05, uppernonzero = 10^7){
-  n <- length(x)
-  delta <- max(diff(x))
-  positions <- unique(positions)
-  positions <- sort(positions)
-  npositions <- length(positions)
+calculatebasis.emg <- function(x, positions = x, alpha, sigma, mu, charges = c(1,2,3,4),
+                               eps = 1e-05, uppernonzero = 10^7, averagine.table) {
+    n <- length(x)
+    delta <- max(diff(x))
+    positions <- unique(positions)
+    positions <- sort(positions)
+    npositions <- length(positions)
+
+    alpha <- alpha(positions)
+    sigma <- sigma(positions)
+    mu <- mu(positions)
   
-  alpha <- alpha(positions)
-  sigma <- sigma(positions)
-  mu <- mu(positions)
+    moderes <- apply(cbind(alpha, sigma, mu), 1, function(z) {
+                                                    getmode <- determinemode(z[1], z[2], z[3])
+                                                    c(-getmode$mode + z[3], 1/getmode$val)})
+
+    mu <- moderes[1,] 
+    scale <- moderes[2,] 
+    kappa <-  1.008 
+    book <- NULL
   
-  moderes <- apply(cbind(alpha, sigma, mu), 1, function(z) {getmode <- determinemode(z[1], z[2], z[3]); c(-getmode$mode + z[3], 1/getmode$val)})
-  mu <- moderes[1,] 
-  scale <- moderes[2,] 
-  kappa <-  1.008 
-  book <- NULL
-  
-  for(l in seq(along = charges)){
-    chargel <- charges[l]
-    amplitudes <- getpeakheights(positions*chargel)
-    amplitudes <- t(apply(amplitudes, 1, function(z) {maxz = max(z); c(z/maxz, maxz)}))
-    ###
-    npeaks <- ncol(amplitudes) - 1
-    ainf <- amplitudes[, (npeaks + 1), drop = FALSE] 
-    centers <- positions + kappa * t(apply(amplitudes, 1, function(z) {origin <- which.max(z); if((origin > 1) & (origin < npeaks)) ret <- c((-1)*((origin-1):1), 0, 1:(npeaks-origin));
-                                                                      if(origin == 1) ret <- (0:(npeaks - 1));
-                                                                      if((origin == npeaks)) ret <- (-1) * ((npeaks-1):0); ret}))/chargel
-    initials <- apply(centers, 1, min) 
+    for (l in seq(along = charges)) {
+        chargel <- charges[l]
+        amplitudes <- getpeakheights(positions * chargel, averagine.table)
+        amplitudes <- t(apply(amplitudes, 1, function(z) {maxz = max(z); c(z/maxz, maxz)}))
+        ###
+        npeaks <- ncol(amplitudes) - 1
+        ainf <- amplitudes[, (npeaks + 1), drop = FALSE] 
+        centers <- positions + kappa * 
+                    t(apply(amplitudes, 1, function(z) {
+                        origin <- which.max(z)
+                        if ((origin > 1) & (origin < npeaks)) 
+                            ret <- c((-1)*((origin-1):1), 0, 1:(npeaks-origin))
+                        if (origin == 1)
+                            ret <- (0:(npeaks - 1))
+                        if ((origin == npeaks))
+                            ret <- (-1) * ((npeaks-1):0)
+                        ret}))/chargel
+        initials <- apply(centers, 1, min) 
     #if(filter){
     #  filtered <- .C("mzfilter", positions = as.double(initials), npositions = as.integer(length(initials)),
     #                 charge = as.integer(chargel),  filteredout = integer(length(initials)))
@@ -190,53 +245,64 @@ calculatebasis.emg <- function(x, positions = x, alpha, sigma, mu, charges = c(1
     #}
     #else{
      
-     centers[centers > max(x)] <- 0
-     centers[centers < min(x)] <- 0
+        centers[centers > max(x)] <- 0
+        centers[centers < min(x)] <- 0
    #}
-
     
-    rangecenters <- apply(centers, 1, function(z){
-                                                 if(all(z == 0)) return(c(0,0))
-                                                 else return(range(z[z > 0]))})
-    fence <- sigma^2 / (2 * alpha) + mu - alpha * log(alpha * eps/(sqrt(2*pi) * sigma))
+        rangecenters <- apply(centers, 1, function(z) {
+                if (all(z == 0))
+                    return (c(0,0))
+                else 
+                    return (range(z[z > 0]))})
 
-     block <- matrix(0, nrow = uppernonzero, ncol = 3)
-     resultC <- .C("emgbasis", block = block, x = as.double(x), amplitudes = amplitudes,
-                              centers = centers, npositions = as.integer(npositions), n = as.integer(n), maxnpeaks = as.integer(npeaks),
-                              alpha = as.double(alpha), sigma = as.double(sigma), mu = as.double(mu), nonzero = as.integer(-1), eps = as.double(eps),
-                              uppernonzero = as.integer(uppernonzero),   lower = rangecenters[1,] - fence,
-                   upper = rangecenters[2,] + fence, colmax = double(npositions)) 
+        fence <- sigma^2 / (2 * alpha) + mu - alpha * log(alpha * eps/(sqrt(2*pi) * sigma))
 
-     if((resultC$nonzero +1) == 0) next 
+        block <- matrix(0, nrow = uppernonzero, ncol = 3)
+        resultC <- .C("emgbasis",
+                      block = block,
+                      x = as.double(x),
+                      amplitudes = amplitudes,
+                      centers = centers,
+                      npositions = as.integer(npositions),
+                      n = as.integer(n),
+                      maxnpeaks = as.integer(npeaks),
+                      alpha = as.double(alpha),
+                      sigma = as.double(sigma),
+                      mu = as.double(mu),
+                      nonzero = as.integer(-1),
+                      eps = as.double(eps),
+                      uppernonzero = as.integer(uppernonzero),
+                      lower = rangecenters[1,] - fence,
+                      upper = rangecenters[2,] + fence, colmax = double(npositions)) 
+
+        if ((resultC$nonzero +1) == 0)
+            next 
     
-     if(!exists("Phi")){
-       temp <- sparseMatrix(i = as.integer(resultC$block[1:(resultC$nonzero + 1), 1]),
-                                  j = as.integer(resultC$block[1:(resultC$nonzero + 1), 2]),
-                                  x = resultC$block[1:(resultC$nonzero + 1), 3],
-                                  dims = c(n, npositions))
-       remove <- resultC$colmax == 0
-       Phi <- temp[,!remove,drop = FALSE] %*% Diagonal(n = sum(!remove), 1/resultC$colmax[!remove])
-     }
-
-     else{
-       temp <- sparseMatrix(i = as.integer(resultC$block[1:(resultC$nonzero + 1), 1]),
-                                  j = as.integer(resultC$block[1:(resultC$nonzero + 1), 2]),
-                                  x = resultC$block[1:(resultC$nonzero + 1), 3],
-                                  dims = c(n, npositions))
+        if (!exists("Phi")) {
+            temp <- sparseMatrix(i = as.integer(resultC$block[1:(resultC$nonzero + 1), 1]),
+                                 j = as.integer(resultC$block[1:(resultC$nonzero + 1), 2]),
+                                 x = resultC$block[1:(resultC$nonzero + 1), 3],
+                                 dims = c(n, npositions))
+            remove <- resultC$colmax == 0
+            Phi <- temp[,!remove,drop = FALSE] %*% Diagonal(n = sum(!remove), 1/resultC$colmax[!remove])
+        } else{
+            temp <- sparseMatrix(i = as.integer(resultC$block[1:(resultC$nonzero + 1), 1]),
+                                 j = as.integer(resultC$block[1:(resultC$nonzero + 1), 2]),
+                                 x = resultC$block[1:(resultC$nonzero + 1), 3],
+                                 dims = c(n, npositions))
        
-       remove <- resultC$colmax == 0
-       temp <- temp[,!remove,drop = FALSE] %*% Diagonal(n = sum(!remove), 1/resultC$colmax[!remove])
-       Phi <- cbind2(Phi, temp) 
-     }
+            remove <- resultC$colmax == 0
+            temp <- temp[,!remove,drop = FALSE] %*% Diagonal(n = sum(!remove), 1/resultC$colmax[!remove])
+            Phi <- cbind2(Phi, temp) 
+        }
 
-     bookl <- cbind(initials, positions, chargel, ainf)[!remove,,drop = FALSE]
+        bookl <- cbind(initials, positions, chargel, ainf)[!remove,,drop = FALSE]
     
-     book <- rbind(book, bookl)  
-  }
+        book <- rbind(book, bookl)  
+    }
 
-  colnames(book) <- c("initial", "most_intense", "charge", "a_inf")
-  return(list(Phi = Phi, book = book)) 
-
+    colnames(book) <- c("initial", "most_intense", "charge", "a_inf")
+    return (list(Phi = Phi, book = book)) 
 }
 
 ### 5. Nonnegative least squares
@@ -1092,31 +1158,3 @@ base64decode <- function(z, what, size = NA, signed = TRUE, endian = .Platform$e
         x = paste(x, collapse = "")
     return(x)
 }
-
-
-
-
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 

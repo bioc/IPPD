@@ -19,6 +19,7 @@ getPeaklist(mz, intensities, model = c("Gaussian", "EMG"),
 model.parameters = list(alpha = function(){},
                         sigma = function(){},
                         mu = function(){}),
+averagine.table = NULL,                     
 loss = c("L2", "L1"), binning = FALSE,
 postprocessing = TRUE, trace = TRUE, returnbasis = TRUE,
 control.basis = list(charges = c(1,2,3,4),
@@ -44,6 +45,10 @@ control.binning = list(tol = 0.01))
     \code{"Gaussian"} or \code{"EMG"} (exponentially modified
     Gaussian). See \link{fitModelParameters} for further information on
     these models.}
+  \item{averagine.table}{If \code{averagine.table = NULL} the usual Averagine model (Senko et al. (1995): Determination of Monoisotopic Masses and Ion Populations for
+Large Biomolecules from Resolved Isotopic Distributions, J. Am. Soc. Mass Spect., 6, 229-233) is used. Otherwise, \code{avergine.table} has to be the character of an \code{.rda} file contained in a
+subdirectory 'data' of the current working directory. That file must contain a \code{matrix} or \code{data.frame} named "tableaveragine" which must be of the following form. Each row encodes the 
+isotope distribution at a certain mass. The first entry of each row contains such mass  while the remaining entries contain the relative abundances of the isotopes.}  
   \item{loss}{The loss function to be used. The choice \code{loss =
       "L2"} yield a nonnegative least squares fit, \code{loss = "L1"} a
     nonnegative least absolute deviation fit. The second choice is
