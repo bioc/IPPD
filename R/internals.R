@@ -44,7 +44,7 @@ localnoise <- function(y, window, quantiledist = 0.1) {
 ### 2. calculation of peakheights according to the averagine model
 
 getpeakheights <- function(mass, averagine.table) {
-    data(averagine.table)
+    data(tableaveragine)
     tabb <- as.matrix(tableaveragine)
     endpoints <- tabb[,1]
     amplitudes <- tabb[,-1]
