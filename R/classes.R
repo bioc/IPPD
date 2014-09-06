@@ -2,6 +2,7 @@ setClass(Class="peaklist",
          representation(peaklist = "matrix",
                         peaklistprocessed = "matrix",
                         model = "character",
+                        averagine.table = "matrix",
                         loss = "character",
                         alpha = "function",
                         sigma = "function",
@@ -15,11 +16,6 @@ setClass(Class="peaklist",
                         goodnessoffit = "numeric",
                         data = "list"))
                    
-                        
-  
-
-
-
 setClass(Class="modelfit",
          representation(model = "character",
                         fitting = "character",
@@ -28,9 +24,3 @@ setClass(Class="modelfit",
                         mufunction = "function",
                         peakfitresults = "matrix",
                         bestpeak = "list"))
-
-
-
-
-
-

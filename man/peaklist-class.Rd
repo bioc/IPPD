@@ -36,6 +36,7 @@
   If \code{postprocessed} has been set to \code{FALSE}
   when calling \link{getPeaklist}, this slot is an empty matrix.}
 \item{model}{One of "Gaussian" or "EMG".}
+\item{averagine.table}{Averagine table used, cf.\link{getPeaklist}.}
 \item{loss}{One of "L2" or "L1".}
 \item{alpha}{Function for the parameter "alpha" (\code{model = "EMG"}).}
 \item{sigma}{Function for the parameter "sigma" (both models).}

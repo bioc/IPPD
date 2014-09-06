@@ -11,6 +11,7 @@
         \begin{tabular}{ll}
         Martin Slawski $^{1}$ & \url{ms@cs.uni-saarland.de}  \\
         Rene Hussong $^2$ & \url{rene.hussong@uni.lu} \\
+				Andreas Hildebrandt $^{3}$ & \url{andreas.hildebrandt@uni-mainz.de} \\
         Matthias Hein $^1$ & \url{hein@cs.uni-saarland.de}
       \end{tabular} 
     }
@@ -23,6 +24,7 @@
                   $\;$ Saarbr\"ucken, Germany \\
                   $^2$ Luxembourg Centre for Systems Biomedicine, University
                   of Luxembourg, Luxemburg \\
+									$^3$ Johannes Gutenberg-University Mainz, Institute for Computer Science, Mainz, Germany\\
                 \end{tabular}\\
                 \vspace{0.2cm}
                 \large , }}

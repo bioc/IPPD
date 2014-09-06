@@ -42,6 +42,7 @@ License: \tab GPL (version 2 or later) \cr
 \author{
   Martin Slawski \email{ms@cs.uni-saarland.de}, \cr
   Rene Hussong \email{rene.hussong@uni.lu}, \cr
+	Andreas Hildebrandt \email{andreas.hildebrandt@uni-mainz.de}, \cr
   Matthias Hein \email{hein@cs.uni-saarland.de}
 
   Maintainer: Martin Slawski \email{ms@cs.uni-saarland.de}.

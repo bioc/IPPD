@@ -75,8 +75,8 @@ setMethod("getPeaklist", signature(mz = "numeric", intensities = "numeric"),
                    if (trace) {
                        cat("No averagine table specified. Using default.\n")
                    }
-                   #data(tableaveragine)
-                   averagine.table <- "tableaveragine"
+                   data(tableaveragine)
+                   averagine.table <- tableaveragine
                } 
 ############################################################################
 
@@ -971,7 +971,7 @@ setMethod("getPeaklist", signature(mz = "numeric", intensities = "numeric"),
                    new("peaklist", peaklist = peaklisto,
                                    peaklistprocessed = peaklistprocessed,
                                    model = model,
-                                   averagine.table = averagine.table,
+                                   averagine.table = as.matrix(averagine.table), 
                                    loss = loss,
                                    alpha = alpha,
                                    sigma = sigma,
@@ -988,7 +988,7 @@ setMethod("getPeaklist", signature(mz = "numeric", intensities = "numeric"),
                    new("peaklist", peaklist = peaklisto,
                                    peaklistprocessed = peaklistprocessed,
                                    model = model,
-                                   averagine.table = averagine.table,
+                                   averagine.table = as.matrix(averagine.table), 
                                    loss = loss,
                                    alpha = alpha,
                                    sigma = sigma,

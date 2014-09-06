@@ -34,7 +34,7 @@ the main method \code{getPeakList}.}
                                            formula.sigma = formula(~1),
                                            formula.mu = formula(~1),
                                            control = list(window = 6,
-                                           threshold = NULL))
+                                           threshold = NULL, rlm.maxit = 20))
 }
 \arguments{
    \item{mz}{A \code{numeric} vector of m/z (mass/charge) values (in Thomson).}
@@ -91,7 +91,9 @@ the main method \code{getPeakList}.}
   is specified, only peaks whose maximum intensity is equal to or
   greater than \code{threshold} is considered. \bold{Note}: Usually, \code{threshold}
 is specified, since otherwise the maximum intensity among the complete
-spectrum minus some epsilon is taken as \code{threshold}.}
+spectrum minus some epsilon is taken as \code{threshold}.
+  \code{rlm.maxit} allows to control the maximum number of iterations used to fit
+  peaks to the data.}
   }
 
 
