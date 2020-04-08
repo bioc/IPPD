@@ -1,7 +1,7 @@
 Package: IPPD
 Title: Isotopic peak pattern deconvolution for Protein Mass
         Spectrometry by template matching
-Version: 1.35.1
+Version: 1.35.2
 Date: 2014-07-24
 Author: Martin Slawski <ms@cs.uni-saarland.de>, Rene Hussong <rene.hussong@uni.lu>, Andreas Hildebrandt <andreas.hildebrandt@uni-mainz.de>, Matthias Hein <hein@cs.uni-saarland.de>
 Maintainer: Martin Slawski <ms@cs.uni-saarland.de>
@@ -16,7 +16,7 @@ Description: The package provides functionality to extract isotopic peak
   the data. The package also provides functionality to process LCMS runs.
 License: GPL (version 2 or later)
 Collate: classes.R methods.R getPeaklist.R fitModelParameters.R
-        internals.R analyzeLCMS.R read.mzXML.R sweepline.R
+        internals.R analyzeLCMS.R read.mzXML.R sweepline.R zzz.R
 biocViews: Proteomics
 Packaged: 2014-04-12 06:21:02 UTC; biocbuild
 PackageStatus: Deprecated
